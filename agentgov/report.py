@@ -47,7 +47,13 @@ def _format_chain(template: str, context: dict[str, str]) -> str:
         return template
 
 
-def _render_finding(idx: int, finding: Finding, pattern: dict[str, Any], agent: dict[str, Any]) -> list[str]:
+def _render_finding(
+    idx: int,
+    finding: Finding,
+    pattern: dict[str, Any],
+    agent: dict[str, Any],
+    controls: dict[str, Any],
+) -> list[str]:
     lines: list[str] = []
     sev = finding.severity.upper()
     lines.append(f"### {idx}. [{sev}] {pattern['title']}")
@@ -73,7 +79,19 @@ def _render_finding(idx: int, finding: Finding, pattern: dict[str, Any], agent: 
         )
     lines.append("")
 
-    # System-card fluency: tie a finding to the wrapped model's published card.
+    # Required controls and actions, resolved from the controls catalog.
+    rows = [
+        controls[f"{t['framework']}:{t['ref']}"]
+        for t in pattern.get("triggers", [])
+        if f"{t['framework']}:{t['ref']}" in controls
+    ]
+    if rows:
+        lines.append("**Required control and action.**")
+        for c in rows:
+            lines.append(f"- **{c['control']}** - {c['action']} _({c['why']})_")
+        lines.append("")
+
+    # Tie a finding to the wrapped model's published system card.
     card = (agent.get("model") or {}).get("system_card")
     if card:
         note = card.get("note")
@@ -214,7 +232,7 @@ def render_markdown(agent: dict[str, Any], findings: list[Finding], corpus: dict
             pattern = patterns.get(finding.pattern_id)
             if pattern is None:
                 continue
-            out.extend(_render_finding(i, finding, pattern, agent))
+            out.extend(_render_finding(i, finding, pattern, agent, corpus.get("controls", {})))
 
     # Frameworks appendix: the corpus as a reference table.
     out.append("## Frameworks referenced")

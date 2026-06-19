@@ -156,14 +156,21 @@ This is an early, deliberately small tool. Known gaps, on the roadmap:
 - **Not legal advice.** The corpus is a curated, paraphrased slice of public material; cite
   EUR-Lex / NIST for authoritative text.
 
-## Roadmap (next iteration)
+## Roadmap
 
-- **Corpus into a database** - Postgres + pgvector for semantic search over clause text, and
-  a graph DB for the relationships between risks, controls, and obligations (the `loader.py`
-  seam already isolates this).
-- **More outputs from one scan** - JSON for CI and dashboards, and a formal compliance
-  register (obligations, status, evidence) for auditors.
-- **Run on real projects** - real LangGraph codebases and real LangSmith traces, not just demos.
+**In place now**
+- **Controls catalog** (`corpus/controls.yaml`) - every obligation resolves to a concrete
+  control, action, and reason; the full report shows the action to take, not just the rule.
+- **KnowledgeStore seam** (`knowledge.py`) - one interface between the checks and the
+  governance knowledge, so a database backend can replace YAML with no change elsewhere.
+- **Service scaffold** (`docker-compose.yml`) - Postgres + pgvector and Neo4j, ready to wire.
+- **Runs on real repos** - verified on a public multi-agent LangGraph project.
+
+**Next**
+- **Wire the DB backend** - load the corpus into Postgres + pgvector (semantic clause search)
+  and Neo4j (risk -> obligation -> control graph); `AGENTGOV_BACKEND=db` switches to it.
+- **Ingest the full frameworks** - the complete NIST / EU / Inspect content, not the slice.
+- **More outputs from one scan** - JSON for CI, and a formal compliance register for auditors.
 - **Skill wrapper** - the inline "audit while you build" experience.
 
 ## Data sources and licensing

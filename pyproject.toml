@@ -9,6 +9,11 @@ authors = [{ name = "Himanshu Pandey" }]
 keywords = ["ai-governance", "ai-safety", "nist-ai-rmf", "eu-ai-act", "agents", "langgraph"]
 dependencies = ["pyyaml>=6.0"]
 
+[project.optional-dependencies]
+# Next-iteration database backend (Postgres + pgvector + Neo4j). Not needed for
+# the default offline YAML mode.
+db = ["psycopg[binary]>=3.1", "neo4j>=5.0", "pgvector>=0.2", "sentence-transformers>=2.2"]
+
 [project.scripts]
 agentgov = "agentgov.cli:main"
 

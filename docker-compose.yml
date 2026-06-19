@@ -1,0 +1,36 @@
+# v2 service stack (next iteration). The governance corpus moves out of YAML into:
+#   - postgres + pgvector : relational tables + semantic search over clause text
+#   - neo4j               : the risk -> obligation -> control graph and crosswalks
+#
+# The data is small (a few MB), so it is seeded at startup - no external downloads
+# at runtime. agentgov keeps working with no databases running (YAML is the default
+# backend); set AGENTGOV_BACKEND=db to use these.
+#
+# Status: scaffold. The DB-backed KnowledgeStore and the ingest/ loaders are the
+# next build step (see README roadmap).
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: agentgov
+      POSTGRES_PASSWORD: agentgov
+      POSTGRES_DB: governance
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  neo4j:
+    image: neo4j:5-community
+    environment:
+      NEO4J_AUTH: neo4j/agentgovpass
+    ports:
+      - "7474:7474"   # browser
+      - "7687:7687"   # bolt
+    volumes:
+      - neo4jdata:/data
+
+volumes:
+  pgdata:
+  neo4jdata:

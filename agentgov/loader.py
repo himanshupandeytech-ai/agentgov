@@ -33,6 +33,7 @@ def load_corpus() -> dict[str, Any]:
     """
     return {
         "risk_patterns": _read_packaged("risk_patterns.yaml"),
+        "controls": _read_packaged("controls.yaml").get("controls", {}),
         "nist": _read_packaged("nist.yaml"),
         "eu_ai_act": _read_packaged("eu_ai_act.yaml"),
     }

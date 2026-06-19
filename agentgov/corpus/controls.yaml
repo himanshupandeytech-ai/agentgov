@@ -1,0 +1,45 @@
+# Controls catalog: obligation -> concrete control -> action.
+#
+# This is the layer that turns a *mapping* into an *action*. A detector finds a
+# risk, the risk maps to one or more obligations, and each obligation resolves -
+# through this catalog - to a concrete control and the action to take, with the
+# reason. Actions come from this curated catalog, never invented, which is what
+# keeps remediation trustworthy.
+#
+# Keyed by "FRAMEWORK:ref" so the same control can be reused across many risks.
+
+controls:
+  "EU_AI_ACT:Article 14(4)":
+    control: "Human-in-the-loop approval gate"
+    action: "Require explicit human approval before the action node executes."
+    why: "Article 14(4) requires that a person can intervene in, or interrupt, the system."
+
+  "EU_AI_ACT:Article 15":
+    control: "Untrusted-input isolation and adversarial hardening"
+    action: "Sanitise or quarantine externally-derived content before it reaches an action node; test for prompt injection."
+    why: "Article 15 requires resilience against attempts to manipulate inputs."
+
+  "EU_AI_ACT:Article 12":
+    control: "Automatic event logging"
+    action: "Enable append-only logging of tool calls and decisions for the system's lifetime."
+    why: "Article 12 requires automatic record-keeping for traceability."
+
+  "NIST_AI_RMF:MANAGE-2.3":
+    control: "Supervise / override / disengage mechanism"
+    action: "Add a control that lets an operator supervise, override, or disengage the action."
+    why: "MANAGE-2.3 requires mechanisms to supervise or stop AI system actions."
+
+  "NIST_AI_RMF:MEASURE-2.7":
+    control: "Security and resilience evaluation"
+    action: "Evaluate and document the agent's resilience to injection and manipulation."
+    why: "MEASURE-2.7 requires security and resilience to be evaluated and documented."
+
+  "NIST_AI_RMF:MEASURE-2.6":
+    control: "Safety evaluation for emergent behaviour"
+    action: "Bound the loop (max depth / step budget) and evaluate for runaway behaviour."
+    why: "MEASURE-2.6 requires evaluation for unanticipated or emergent behaviour."
+
+  "NIST_AI_RMF:GOVERN-1.4":
+    control: "Documented, traceable risk process"
+    action: "Record the control decision and its outcome so the process is auditable."
+    why: "GOVERN-1.4 requires the risk process and outcomes to be documented and traceable."
