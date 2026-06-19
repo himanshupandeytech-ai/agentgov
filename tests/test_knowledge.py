@@ -48,7 +48,7 @@ def test_full_report_renders_control_and_action():
 
 def test_unknown_backend_raises():
     try:
-        get_store("db")
+        get_store("nonsense")
     except NotImplementedError:
         return
-    raise AssertionError("expected NotImplementedError for unwired 'db' backend")
+    raise AssertionError("expected NotImplementedError for an unknown backend")

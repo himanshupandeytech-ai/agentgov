@@ -1,0 +1,83 @@
+# Labelled benchmark for detector accuracy. Each case is an agent spec plus the
+# pattern ids that *should* fire. The runner compares detector output to these
+# labels and reports precision / recall / F1.
+#
+# Cases include positives, clean negatives, and two that specifically test
+# accuracy over naive matching: a sanitised injection path (must NOT fire) and a
+# bounded loop (must NOT fire).
+
+cases:
+  - name: unsupervised_action
+    expect: [unsupervised_external_write]
+    agent:
+      nodes:
+        - { id: plan, consumes_external: false, external_action: false }
+        - { id: transfer_funds, external_action: true, human_in_loop: false }
+      edges: [{ from: plan, to: transfer_funds }]
+      oversight: { kill_switch: true, audit_log: true }
+
+  - name: injection_path
+    expect: [injection_to_exfiltration]
+    agent:
+      nodes:
+        - { id: web_search, consumes_external: true }
+        - { id: summarize }
+        - { id: send_email, external_action: true, human_in_loop: true }
+      edges:
+        - { from: web_search, to: summarize }
+        - { from: summarize, to: send_email }
+      oversight: { kill_switch: true, audit_log: true }
+
+  - name: injection_but_sanitised   # accuracy test: must NOT fire
+    expect: []
+    agent:
+      nodes:
+        - { id: web_search, consumes_external: true }
+        - { id: sanitise, sanitizes_input: true }
+        - { id: send_email, external_action: true, human_in_loop: true }
+      edges:
+        - { from: web_search, to: sanitise }
+        - { from: sanitise, to: send_email }
+      oversight: { kill_switch: true, audit_log: true }
+
+  - name: delegation_loop
+    expect: [unbounded_delegation_loop]
+    agent:
+      nodes:
+        - { id: planner }
+        - { id: worker }
+      edges:
+        - { from: planner, to: worker }
+        - { from: worker, to: planner }
+      oversight: { kill_switch: true, audit_log: true }
+
+  - name: bounded_loop   # accuracy test: must NOT fire
+    expect: []
+    agent:
+      limits: { max_steps: 10 }
+      nodes:
+        - { id: planner }
+        - { id: worker }
+      edges:
+        - { from: planner, to: worker }
+        - { from: worker, to: planner }
+      oversight: { kill_switch: true, audit_log: true }
+
+  - name: missing_oversight
+    expect: [missing_oversight_instrumentation]
+    agent:
+      nodes:
+        - { id: post_update, external_action: true, human_in_loop: true }
+      edges: []
+      oversight: { kill_switch: false, audit_log: false }
+
+  - name: clean_agent
+    expect: []
+    agent:
+      nodes:
+        - { id: web_search, consumes_external: true }
+        - { id: summarize }
+        - { id: send_email, external_action: true, human_in_loop: true }
+      edges:
+        - { from: web_search, to: summarize }
+      oversight: { kill_switch: true, audit_log: true }

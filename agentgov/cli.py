@@ -6,10 +6,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import __version__
+from . import __version__, config
 from .detectors import run_detectors
 from .code_import import load_code
-from .loader import load_agent, load_corpus
+from .knowledge import get_store
+from .loader import load_agent
 from .report import render_markdown, render_summary
 from .trace_import import load_trace
 
@@ -28,7 +29,7 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    corpus = load_corpus()
+    corpus = get_store(config.backend()).as_corpus()
     findings = run_detectors(agent)
     render = render_markdown if args.full else render_summary
     report = render(agent, findings, corpus)
@@ -38,6 +39,20 @@ def _cmd_audit(args: argparse.Namespace) -> int:
         print(f"wrote {len(findings)} finding(s) to {args.output}", file=sys.stderr)
     else:
         print(report)
+    return 0
+
+
+def _cmd_match(args: argparse.Namespace) -> int:
+    """Semantic search over the governance corpus (requires AGENTGOV_BACKEND=db)."""
+    store = get_store("db")
+    print(f"# Nearest obligations to: {args.text!r}\n")
+    print("| Score | Framework | Ref | Title | Action |")
+    print("|---|---|---|---|---|")
+    for r in store.semantic_match(args.text, k=args.k):
+        print(
+            f"| {r['score']} | {r['framework']} | {r['ref']} | {r['title']} "
+            f"| {r['action'] or '-'} |"
+        )
     return 0
 
 
@@ -72,6 +87,13 @@ def build_parser() -> argparse.ArgumentParser:
         "-o", "--output", help="Write the Markdown report to a file instead of stdout."
     )
     audit.set_defaults(func=_cmd_audit)
+
+    match = sub.add_parser(
+        "match", help="Semantic search over the governance corpus (needs the db backend)."
+    )
+    match.add_argument("text", help="Free-text description of a risk to match against obligations.")
+    match.add_argument("-k", type=int, default=3, help="Number of matches to return.")
+    match.set_defaults(func=_cmd_match)
     return parser
 
 

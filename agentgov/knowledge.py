@@ -68,11 +68,21 @@ class YamlKnowledgeStore:
     def frameworks(self) -> dict[str, Any]:
         return {"nist": self._nist, "eu_ai_act": self._eu}
 
+    def as_corpus(self) -> dict[str, Any]:
+        return {
+            "risk_patterns": self._patterns_doc,
+            "controls": self._controls,
+            "nist": self._nist,
+            "eu_ai_act": self._eu,
+        }
+
 
 def get_store(backend: str = "yaml") -> KnowledgeStore:
-    """Return a KnowledgeStore. Only 'yaml' is wired today; 'db' is the next step."""
+    """Return a KnowledgeStore. 'yaml' is offline; 'db' uses Postgres + Neo4j."""
     if backend == "yaml":
         return YamlKnowledgeStore()
-    raise NotImplementedError(
-        f"backend '{backend}' is not wired yet - see docker-compose.yml and the roadmap"
-    )
+    if backend == "db":
+        from .db_store import DbKnowledgeStore
+
+        return DbKnowledgeStore()
+    raise NotImplementedError(f"unknown backend '{backend}'")

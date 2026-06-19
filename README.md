@@ -71,6 +71,37 @@ uv run agentgov audit demo/agent.yaml -o out.md  # or write the report to a file
 
 Input type is auto-detected: `.yaml` = manifest, `.py` = LangGraph code, `.json` = run trace.
 
+### Database mode (optional)
+
+By default the corpus is YAML and the tool runs fully offline. To use the database
+backend - Postgres + pgvector for semantic search and Neo4j for the risk graph:
+
+```bash
+docker compose up -d                                  # Postgres (pgvector) + Neo4j
+uv run --extra db python -m agentgov.ingest           # load the corpus into both
+AGENTGOV_BACKEND=db uv run --extra db agentgov audit demo/agent_graph.py
+
+# semantic search over the obligations (free text, no hard-coded rule):
+uv run --extra db agentgov match "the agent sends money with no approval"
+#  -> top match: EU Art. 14(4) Human oversight -> require explicit human approval
+```
+
+## Accuracy
+
+Detection is **taint analysis**, not keyword matching: untrusted input is traced
+along the graph to action sinks, and a **sanitiser node stops the taint** - so a
+defended path is not flagged. A labelled benchmark (`benchmark/cases.yaml`) guards
+this, including deliberate false-positive traps (a sanitised injection path, a
+bounded loop):
+
+```bash
+uv run python -m agentgov.benchmark
+#  TP=4  FP=0  FN=0   precision=1.0  recall=1.0  f1=1.0
+```
+
+The benchmark is small and curated; the honest next step is expanding it with
+real-world agents to find the cases where precision drops.
+
 ## Risks it mitigates today
 
 | Risk (plain English) | What can go wrong | Mapped obligations |
@@ -159,17 +190,16 @@ This is an early, deliberately small tool. Known gaps, on the roadmap:
 ## Roadmap
 
 **In place now**
-- **Controls catalog** (`corpus/controls.yaml`) - every obligation resolves to a concrete
-  control, action, and reason; the full report shows the action to take, not just the rule.
-- **KnowledgeStore seam** (`knowledge.py`) - one interface between the checks and the
-  governance knowledge, so a database backend can replace YAML with no change elsewhere.
-- **Service scaffold** (`docker-compose.yml`) - Postgres + pgvector and Neo4j, ready to wire.
+- **Taint-analysis detection** with sanitiser awareness, guarded by a precision/recall benchmark.
+- **Controls catalog** - every obligation resolves to a concrete control, action, and reason.
+- **Database backend** - Postgres + pgvector (semantic search) and Neo4j (risk -> obligation ->
+  control graph), behind the `KnowledgeStore` seam; `AGENTGOV_BACKEND=db` switches to it.
+- **`match` command** - semantic search of a free-text risk against the obligations.
 - **Runs on real repos** - verified on a public multi-agent LangGraph project.
 
 **Next**
-- **Wire the DB backend** - load the corpus into Postgres + pgvector (semantic clause search)
-  and Neo4j (risk -> obligation -> control graph); `AGENTGOV_BACKEND=db` switches to it.
-- **Ingest the full frameworks** - the complete NIST / EU / Inspect content, not the slice.
+- **Ingest the full frameworks** - the complete NIST / EU / Inspect content, not the curated slice.
+- **Grow the benchmark** with real-world agents to find where precision drops.
 - **More outputs from one scan** - JSON for CI, and a formal compliance register for auditors.
 - **Skill wrapper** - the inline "audit while you build" experience.
 

@@ -17,7 +17,7 @@ services:
       POSTGRES_PASSWORD: agentgov
       POSTGRES_DB: governance
     ports:
-      - "5432:5432"
+      - "55432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -26,8 +26,8 @@ services:
     environment:
       NEO4J_AUTH: neo4j/agentgovpass
     ports:
-      - "7474:7474"   # browser
-      - "7687:7687"   # bolt
+      - "17475:7474"   # browser
+      - "17688:7687"   # bolt
     volumes:
       - neo4jdata:/data
 

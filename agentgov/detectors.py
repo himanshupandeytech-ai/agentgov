@@ -50,19 +50,6 @@ def _adjacency(agent: dict[str, Any]) -> dict[str, list[str]]:
     return adj
 
 
-def _reachable(start: str, adj: dict[str, list[str]]) -> set[str]:
-    """Nodes reachable from `start` following directed edges (excludes start)."""
-    seen: set[str] = set()
-    stack = list(adj.get(start, []))
-    while stack:
-        node = stack.pop()
-        if node in seen:
-            continue
-        seen.add(node)
-        stack.extend(adj.get(node, []))
-    return seen
-
-
 def detect_unsupervised_external_write(agent: dict[str, Any]) -> list[Finding]:
     """A node performs an external/irreversible action with no human approval."""
     findings: list[Finding] = []
@@ -84,27 +71,67 @@ def detect_unsupervised_external_write(agent: dict[str, Any]) -> list[Finding]:
     return findings
 
 
-def detect_injection_to_exfiltration(agent: dict[str, Any]) -> list[Finding]:
-    """A path runs from an untrusted-input node to an external-action node."""
+def _taint(agent: dict[str, Any]) -> set[str]:
+    """Propagate taint from untrusted sources along edges to a fixpoint.
+
+    A node is tainted if it consumes external content, or if any predecessor is
+    tainted and the node does not sanitise its input. Sanitiser nodes
+    (`sanitizes_input: true`) stop propagation - this is what separates a real
+    exfiltration path from one that is already defended, and is the difference
+    between taint analysis and plain reachability.
+    """
     nodes = _nodes_by_id(agent)
-    adj = _adjacency(agent)
+    tainted = {nid for nid, n in nodes.items() if n.get("consumes_external")}
+    edges = [(e["from"], e["to"]) for e in agent.get("edges", [])]
+    changed = True
+    while changed:
+        changed = False
+        for src, dst in edges:
+            if src in tainted and dst not in tainted and not nodes.get(dst, {}).get("sanitizes_input"):
+                tainted.add(dst)
+                changed = True
+    return tainted
+
+
+def _tainted_source_to(sink: str, agent: dict[str, Any], tainted: set[str]) -> str | None:
+    """Find an untrusted source with a sanitiser-free tainted path to `sink`."""
+    nodes = _nodes_by_id(agent)
+    preds: dict[str, list[str]] = {n["id"]: [] for n in agent.get("nodes", [])}
+    for e in agent.get("edges", []):
+        preds.setdefault(e["to"], []).append(e["from"])
+    seen, stack = set(), [sink]
+    while stack:
+        node = stack.pop()
+        if nodes.get(node, {}).get("consumes_external"):
+            return node
+        for p in preds.get(node, []):
+            if p in tainted and p not in seen:
+                seen.add(p)
+                stack.append(p)
+    return None
+
+
+def detect_injection_to_exfiltration(agent: dict[str, Any]) -> list[Finding]:
+    """An external-action node is reachable from untrusted input via a path with
+    no sanitiser (taint analysis)."""
+    nodes = _nodes_by_id(agent)
+    tainted = _taint(agent)
     findings: list[Finding] = []
-    sources = [nid for nid, n in nodes.items() if n.get("consumes_external")]
-    for src in sources:
-        for dst in _reachable(src, adj):
-            if nodes.get(dst, {}).get("external_action"):
-                findings.append(
-                    Finding(
-                        pattern_id="injection_to_exfiltration",
-                        severity="high",
-                        nodes=[src, dst],
-                        evidence=(
-                            f"Untrusted input at '{src}' reaches external-action "
-                            f"node '{dst}' via a directed path."
-                        ),
-                        context={"src": src, "dst": dst},
-                    )
+    for nid, n in nodes.items():
+        if n.get("external_action") and nid in tainted and not n.get("consumes_external"):
+            src = _tainted_source_to(nid, agent, tainted) or "untrusted input"
+            findings.append(
+                Finding(
+                    pattern_id="injection_to_exfiltration",
+                    severity="high",
+                    nodes=[src, nid],
+                    evidence=(
+                        f"Untrusted input at '{src}' reaches external-action node "
+                        f"'{nid}' with no sanitiser on the path."
+                    ),
+                    context={"src": src, "dst": nid},
                 )
+            )
     return findings
 
 
