@@ -1,18 +1,50 @@
 # agentgov
 
-**A static governance auditor for the agent orchestration layer.**
+**Governance for AI agents - built into the product lifecycle, not bolted on at the end.**
 
-Inspect and METR evaluate the *model*. As enterprises deploy deep agents, risk
-shifts to the **orchestration layer** - the tools, edges, permissions, autonomy,
-and oversight wiring built *around* the model. Almost nothing audits that.
-`agentgov` does: point it at a declarative agent manifest and it emits a
-**Governance Audit Report** that maps each structural risk to real obligations in
-the **NIST AI RMF**, the **EU AI Act**, and the **Inspect** ecosystem - with the
-reasoning a regulator or risk owner needs to act.
+Model evaluations (Inspect, METR) tell you whether the *model* is safe. They say nothing
+about the *agent you built around it* - the tools it can call, the actions it can take, and
+whether a human is in the loop. That is where most real-world risk lives, and almost nothing
+checks it.
 
-> Behavioral/capability testing is out of scope and hands off to
-> [Inspect](https://inspect.aisi.org.uk). agentgov audits *structure*, not model
-> behavior - it never executes the target agent.
+`agentgov` checks it, at **every stage of building an agent** - design, code, and runtime -
+and maps each problem it finds to a real obligation in the **NIST AI RMF** and the
+**EU AI Act**. One scan, plain-English findings, audit-ready.
+
+> Real example from the demos: an agent quietly wired itself to **transfer $25,000 with no
+> human approval**. Design review can miss it. `agentgov` catches it - and tells you which
+> oversight rule it breaks and how to fix it.
+
+## Governance across the lifecycle
+
+```mermaid
+flowchart LR
+  D["DESIGN<br/>manifest .yaml<br/><i>the plan</i>"]
+  B["BUILD<br/>LangGraph code .py<br/><i>the real wiring</i>"]
+  R["RUNTIME<br/>run trace .json<br/><i>what it did</i>"]
+  E(("agentgov<br/>4 risk checks"))
+  M["Findings mapped to<br/>NIST AI RMF + EU AI Act"]
+  O1["Developer fix-list"]
+  O2["CI / pre-deploy gate"]
+  O3["Audit &amp; compliance register"]
+
+  D --> E
+  B --> E
+  R --> E
+  E --> M
+  M --> O1
+  M --> O2
+  M --> O3
+```
+
+The three layers are **not redundant** - each catches what the others cannot:
+
+| Stage | You give it | It catches (in the demos) | Like in software |
+|---|---|---|---|
+| **Design** | `demo/agent.yaml` | a runaway delegation loop in the planned architecture | architecture review |
+| **Build** | `demo/agent_graph.py` | untrusted web text wired into the email tool (injection) | code review / CI |
+| **Runtime** | `demo/trace_langsmith.json` | a money transfer that actually executed with no approval | QA / UAT / audit logs |
+| _(control)_ | `demo/agent_safe.yaml` | nothing - controls applied, clean pass | a passing build |
 
 ## Quickstart (uv)
 
@@ -30,54 +62,66 @@ uv run agentgov audit demo/agent.yaml -o out.md  # or write the report to a file
 
 Input type is auto-detected: `.yaml` = manifest, `.py` = LangGraph code, `.json` = run trace.
 
-**Three ways to describe an agent - one per lifecycle phase:**
-- **Manifest (`.yaml`)** - what the agent is *meant* to do. For design review.
-- **LangGraph code (`.py`)** - what the agent was actually *built* as. Read statically
-  (never executed). For a pre-deploy / CI check.
-- **Run trace (`.json`)** - what the agent *actually did* on a run. For runtime monitoring
-  and audit. The report states what a trace can and can't show (approvals and oversight
-  wiring aren't always recorded), so it never over-claims.
+## Risks it mitigates today
 
-Or install as a tool:
+| Risk (plain English) | What can go wrong | Mapped obligations |
+|---|---|---|
+| **Unsupervised external action** | the agent sends an email or moves money with no human approval | EU Art. 14(4) human oversight · NIST MANAGE-2.3 |
+| **Prompt-injection -> exfiltration** | hidden instructions in web/email content hijack a downstream tool | EU Art. 15 robustness & cybersecurity · NIST MEASURE-2.7 |
+| **Unbounded delegation loop** | the agent calls itself in a loop - runaway cost or repeated actions | EU Art. 14(4) stop function · NIST MEASURE-2.6 |
+| **Missing oversight** | no audit log or kill-switch - can't stop it or investigate after | EU Art. 12 record-keeping · NIST GOVERN-1.4 |
 
-```bash
-uv tool install .          # then: agentgov audit demo/agent.yaml
-```
+## Compliance and audit readiness
 
-Run the tests:
+Every finding is traceable evidence: the exact rule it touches, the node it lives on, and a
+proportionate fix. That turns a scan into an **audit record** a risk owner can act on.
 
-```bash
-uv run pytest -q
-```
+- **Frameworks mapped today:** EU AI Act Articles **12, 14, 15**; NIST AI RMF **GOVERN-1.4,
+  MEASURE-2.6, MEASURE-2.7, MANAGE-2.3**.
+- **Behavioural testing is out of scope on purpose** - it hands off to
+  [Inspect](https://inspect.aisi.org.uk) (UK AI Security Institute). `agentgov` audits the
+  *structure* of the agent; Inspect tests the *model's behaviour*. Together they cover both.
+- **Reasoning lives in data** (`corpus/*.yaml`), so a non-programmer governance reviewer can
+  read, check, and extend the mappings without touching code.
+
+## Where it runs - including as a skill
+
+`agentgov` is a small, dependency-light CLI by design, so it drops into the places agents are
+actually built:
+
+- **Locally** - a developer runs it on their agent before committing.
+- **In CI / pre-deploy** - a gate that blocks a risky agent from shipping (the design + build
+  layers).
+- **As a skill inside a coding agent** (e.g. Claude Code) - so when someone *builds* an agent
+  with an AI coding assistant, the assistant can audit it inline and explain the governance
+  gaps in plain language. The engine is already a clean CLI, so the skill is a thin wrapper
+  over it (next iteration).
 
 ## How it works
 
 ```
-demo/agent.yaml ─▶ loader ─▶ detectors ─▶ report ─▶ Markdown
-   (manifest)      (seam)    (engine)   (judgment)
+input (.yaml / .py / .json)  ->  loader  ->  detectors  ->  report  ->  Markdown
+                                  (seam)     (4 checks)    (corpus)
 ```
 
-- **`loader.py`** - the storage-agnostic seam. Corpus + manifest are YAML today;
-  a vector DB (semantic clause search), graph DB (cross-framework relationships),
-  or REST API can replace it with **zero change** to detectors or report.
-- **`detectors.py`** - static, deterministic risk detectors over the manifest.
-  Four checks ship; the corpus is written to extend to more.
-- **`corpus/*.yaml`** - the governance knowledge: risk patterns mapped to NIST /
-  EU obligations, with the causal reasoning, severity, context-dependence, and
-  framework gaps living in data (auditable by a non-programmer reviewer).
-- **`report.py`** - composes findings + corpus into the Markdown audit.
+- **`loader.py`** - the single place storage lives. Corpus + input are files today; a
+  vector DB, graph DB, or API can replace it with no change to the rest.
+- **`detectors.py`** - static, deterministic checks over the agent's nodes/edges/permissions.
+  Never runs the target agent.
+- **`corpus/*.yaml`** - the governance knowledge: each risk mapped to NIST / EU obligations,
+  with the reasoning, severity, context-dependence, and framework gaps held as data.
+- **`report.py`** - short table by default; `--full` adds the reasoning behind each finding.
 
 ### The agent manifest
 
-A manifest is **data**, never code. It declares nodes, their permissions, the
-edges between them, and the oversight controls:
+A manifest is **data**, never code. It declares the nodes, their permissions, the edges
+between them, and the oversight controls:
 
 ```yaml
 nodes:
   - id: web_search
     consumes_external: true     # ingests untrusted outside content
     external_action: false
-    human_in_loop: false
   - id: send_email
     external_action: true       # irreversible outbound action
     human_in_loop: false        # no approval gate
@@ -86,62 +130,46 @@ edges:
 oversight: { kill_switch: false, audit_log: false }
 ```
 
-## What it detects (v1)
+## What it does not cover yet (honest scope)
 
-| Pattern | Maps to |
-|---|---|
-| Unsupervised external write / irreversible action | EU Art. 14(4) · NIST MANAGE-2.3 |
-| Prompt-injection → exfiltration path | EU Art. 15 · NIST MEASURE-2.7 |
-| Unbounded delegation / self-invocation loop | EU Art. 14(4) · NIST MEASURE-2.6 |
-| Missing oversight instrumentation (kill-switch / audit log) | EU Art. 12 · NIST GOVERN-1.4 |
+This is an early, deliberately small tool. Known gaps, on the roadmap:
 
-### One issue per lifecycle phase
+- **More of the law.** Only 3 EU articles and 4 NIST subcategories are mapped. Missing: EU
+  Art. 9 (risk management), Art. 10 (data governance), Art. 13 (transparency), Annex III
+  high-risk classification; the full NIST MAP/MEASURE/MANAGE set.
+- **Other frameworks.** No ISO/IEC 42001, OWASP LLM Top 10, or MITRE ATLAS mapping yet.
+- **Data / PII flows.** No GDPR or PII-to-external-tool checks yet.
+- **Dynamic graphs.** The code reader sees structure written literally; a graph built in a
+  loop is only partly visible - the runtime trace layer backstops this.
+- **Not legal advice.** The corpus is a curated, paraphrased slice of public material; cite
+  EUR-Lex / NIST for authoritative text.
 
-The demos are chosen so each stage catches a *different*, characteristic problem - the
-point being that the layers are not redundant:
+## Roadmap (next iteration)
 
-| Phase | Run | Catches |
-|---|---|---|
-| Design (read the plan) | `agentgov audit demo/agent.yaml` | architecture flaw: unbounded delegation loop |
-| Build (read the code) | `agentgov audit demo/agent_graph.py` | wiring flaw: untrusted web text reaches the email tool |
-| Runtime (watch the run) | `agentgov audit demo/trace_langsmith.json` | behaviour flaw: a funds transfer executed with no approval |
-| (control sample) | `agentgov audit demo/agent_safe.yaml` | nothing - controls applied, clean pass |
+- **Corpus into a database** - Postgres + pgvector for semantic search over clause text, and
+  a graph DB for the relationships between risks, controls, and obligations (the `loader.py`
+  seam already isolates this).
+- **More outputs from one scan** - JSON for CI and dashboards, and a formal compliance
+  register (obligations, status, evidence) for auditors.
+- **Run on real projects** - real LangGraph codebases and real LangSmith traces, not just demos.
+- **Skill wrapper** - the inline "audit while you build" experience.
 
-Add `--full` to any of these to see the reasoning behind the finding.
+## Data sources and licensing
 
-Each finding in the report carries: evidence → causal chain → severity rationale
-→ mapped obligations → **system-card tie** → context-dependence (same finding,
-different verdict by deployment) → proportionate control → where the frameworks
-fall short.
-
-## Design principles
-
-- **Start thin, expand later.** A small end-to-end slice that works today;
-  storage and services are added once they earn their place.
-- **Secure by construction.** Static-only (never runs the target agent), offline
-  (no network), one pinned dependency (`pyyaml`), `yaml.safe_load` only,
-  deterministic output.
-- **Reasoning lives in data.** The corpus holds the analysis, so the audit is
-  editable and reviewable by a non-programmer, not buried in code.
-
-## Data sources & licensing
-
-The corpus is a curated slice of public material, reused within license:
+The corpus reuses public material within license:
 
 - **NIST AI RMF 1.0** - [NIST AI 100-1](https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf),
   [Playbook](https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook). U.S. Government work, public domain.
 - **EU AI Act - Regulation (EU) 2024/1689** - [EUR-Lex](https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng).
-  Reused under the Commission reuse policy (Decision 2011/833/EU); summaries are
-  paraphrased - cite EUR-Lex for authoritative wording.
+  Reused under the Commission reuse policy (Decision 2011/833/EU); summaries are paraphrased.
 - **Inspect (UK AISI)** - [inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai),
   [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals). MIT.
 
-## Roadmap (out of scope for v1, by design)
+## Tests
 
-- Live LangGraph graph introspection (opt-in; v1 takes a declarative manifest).
-- Richer trace support (OpenTelemetry / LangGraph checkpoints; data-flow edges, not just timeline).
-- More detectors (PII-to-external paths, over-broad tool scopes) - the corpus is written to extend.
-- Corpus backend swap: Postgres + pgvector / graph DB behind the existing loader seam.
+```bash
+uv run pytest -q
+```
 
 ## License
 
