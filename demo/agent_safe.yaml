@@ -12,12 +12,13 @@ name: research-assistant-governed
 description: "Searches the web, drafts findings; emails a summary only on human approval."
 
 model:
-  name: "Claude Opus 4.8 (claude-opus-4-8)"
+  name: "Frontier LLM (vendor model)"
   system_card:
-    url: "https://www-cdn.anthropic.com/0b4915911bb0d19eca5b5ee635c80fef830a37ea.pdf"
+    url: "https://example.com/model-system-card"
     note: >-
       Same model as the ungoverned demo; here the deployment supplies the human
-      oversight the system card recommends for consequential outbound actions.
+      oversight the model provider's system card recommends for consequential
+      outbound actions.
 
 nodes:
   - id: web_search

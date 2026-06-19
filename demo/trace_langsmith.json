@@ -1,9 +1,9 @@
 {
   "name": "ops-assistant (from LangSmith trace)",
   "model": {
-    "name": "Claude Opus 4.8 (claude-opus-4-8)",
+    "name": "Frontier LLM (vendor model)",
     "system_card": {
-      "url": "https://www-cdn.anthropic.com/0b4915911bb0d19eca5b5ee635c80fef830a37ea.pdf",
+      "url": "https://example.com/model-system-card",
       "note": "The system card recommends human oversight for consequential outbound actions; this run executed a funds transfer with no recorded approval step."
     }
   },

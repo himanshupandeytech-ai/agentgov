@@ -11,7 +11,7 @@ name: research-orchestrator
 description: "A planner delegates research to a worker, which can hand back for another round."
 
 model:
-  name: "Claude Opus 4.8 (claude-opus-4-8)"
+  name: "Frontier LLM (vendor model)"
 
 nodes:
   - id: planner

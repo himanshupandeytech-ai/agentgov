@@ -97,7 +97,7 @@ actually built:
 - **Locally** - a developer runs it on their agent before committing.
 - **In CI / pre-deploy** - a gate that blocks a risky agent from shipping (the design + build
   layers).
-- **As a skill inside a coding agent** (e.g. Claude Code) - so when someone *builds* an agent
+- **As a skill inside a coding agent** - so when someone *builds* an agent
   with an AI coding assistant, the assistant can audit it inline and explain the governance
   gaps in plain language. The engine is already a clean CLI, so the skill is a thin wrapper
   over it (next iteration).
