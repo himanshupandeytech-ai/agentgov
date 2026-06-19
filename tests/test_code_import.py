@@ -49,6 +49,15 @@ def test_approval_gate_clears_write_but_injection_path_remains():
     assert "missing_oversight_instrumentation" not in pattern_ids
 
 
+def test_node_location_captures_line_and_function():
+    agent = code_to_agent(SOURCE, filename="demo/agent_graph.py")
+    by_id = {n["id"]: n for n in agent["nodes"]}
+    loc = by_id["send_email"]["location"]
+    assert loc["file"] == "demo/agent_graph.py"
+    assert isinstance(loc["line"], int) and loc["line"] > 0
+    assert loc["function"] == "build"  # send_email is added inside build()
+
+
 def test_conditional_edges_dict_targets():
     src = """
 b.add_conditional_edges("router", choose, {"a": "tool_a", "b": "tool_b"})

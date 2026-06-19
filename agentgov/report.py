@@ -18,6 +18,28 @@ def _patterns_index(corpus: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {p["id"]: p for p in corpus["risk_patterns"]["patterns"]}
 
 
+def _loc_index(agent: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {n["id"]: n.get("location") for n in agent.get("nodes", [])}
+
+
+def _format_where(nodes: list[str], agent: dict[str, Any]) -> str:
+    """Render node names, with file:line:function when the input was code."""
+    if not nodes:
+        return "-"
+    locs = _loc_index(agent)
+    parts = []
+    for n in nodes:
+        loc = locs.get(n) or {}
+        if loc.get("line"):
+            tag = f"{loc.get('file', '')}:{loc['line']}"
+            if loc.get("function"):
+                tag += f" in {loc['function']}()"
+            parts.append(f"`{n}` ({tag})")
+        else:
+            parts.append(f"`{n}`")
+    return ", ".join(parts)
+
+
 def _format_chain(template: str, context: dict[str, str]) -> str:
     try:
         return template.format(**context)
@@ -30,7 +52,7 @@ def _render_finding(idx: int, finding: Finding, pattern: dict[str, Any], agent: 
     sev = finding.severity.upper()
     lines.append(f"### {idx}. [{sev}] {pattern['title']}")
     if finding.nodes:
-        lines.append(f"**Where:** `{'`, `'.join(finding.nodes)}`")
+        lines.append(f"**Where:** {_format_where(finding.nodes, agent)}")
     lines.append("")
     lines.append(f"**Evidence.** {finding.evidence}")
     lines.append("")
@@ -116,7 +138,7 @@ def render_summary(agent: dict[str, Any], findings: list[Finding], corpus: dict[
     ranked = sorted(findings, key=lambda f: SEVERITY_ORDER.get(f.severity, 99))
     for i, f in enumerate(ranked, 1):
         p = patterns.get(f.pattern_id, {})
-        where = "`" + "`, `".join(f.nodes) + "`" if f.nodes else "-"
+        where = _format_where(f.nodes, agent)
         out.append(
             f"| {i} | {f.severity.upper()} | {p.get('title', f.pattern_id)} | "
             f"{where} | {_refs_short(p)} | {p.get('fix_short', '-')} |"

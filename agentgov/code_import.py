@@ -47,18 +47,46 @@ def _string_list(node: ast.AST) -> list[str]:
     return []
 
 
-def code_to_agent(source: str, name: str = "agent-from-code") -> dict[str, Any]:
+def _function_ranges(tree: ast.AST) -> list[tuple[int, int, str]]:
+    """(start_line, end_line, name) for every function, for line->function lookup."""
+    ranges: list[tuple[int, int, str]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            end = getattr(node, "end_lineno", node.lineno)
+            ranges.append((node.lineno, end, node.name))
+    return ranges
+
+
+def _enclosing_function(line: int, ranges: list[tuple[int, int, str]]) -> str | None:
+    """Innermost function containing `line` (smallest span wins for nesting)."""
+    best: tuple[int, str] | None = None
+    for start, end, fn_name in ranges:
+        if start <= line <= end:
+            span = end - start
+            if best is None or span < best[0]:
+                best = (span, fn_name)
+    return best[1] if best else None
+
+
+def code_to_agent(
+    source: str, name: str = "agent-from-code", filename: str = "<source>"
+) -> dict[str, Any]:
     """Parse LangGraph source text into an agent dict for the detectors."""
     tree = ast.parse(source)
+    fn_ranges = _function_ranges(tree)
 
     node_ids: list[str] = []          # preserves declaration order
     edges: list[dict[str, str]] = []
     tool_names: set[str] = set()
     human_nodes: set[str] = set()
+    loc: dict[str, int] = {}          # node id -> source line
 
-    def _add_node(nid: str | None) -> None:
-        if nid and nid not in _SENTINELS and nid not in node_ids:
-            node_ids.append(nid)
+    def _add_node(nid: str | None, line: int | None = None) -> None:
+        if nid and nid not in _SENTINELS:
+            if nid not in node_ids:
+                node_ids.append(nid)
+            if line is not None and nid not in loc:
+                loc[nid] = line
 
     for call in ast.walk(tree):
         if not isinstance(call, ast.Call):
@@ -71,18 +99,18 @@ def code_to_agent(source: str, name: str = "agent-from-code") -> dict[str, Any]:
             continue
 
         if fname == "add_node" and call.args:
-            _add_node(_as_name(call.args[0]))
+            _add_node(_as_name(call.args[0]), call.lineno)
 
         elif fname == "add_edge" and len(call.args) >= 2:
             src, dst = _as_name(call.args[0]), _as_name(call.args[1])
-            _add_node(src)
-            _add_node(dst)
+            _add_node(src, call.lineno)
+            _add_node(dst, call.lineno)
             if src and dst and src not in _SENTINELS and dst not in _SENTINELS:
                 edges.append({"from": src, "to": dst})
 
         elif fname == "add_conditional_edges" and call.args:
             src = _as_name(call.args[0])
-            _add_node(src)
+            _add_node(src, call.lineno)
             targets: list[str] = []
             for arg in call.args[1:]:
                 if isinstance(arg, ast.Dict):
@@ -111,6 +139,12 @@ def code_to_agent(source: str, name: str = "agent-from-code") -> dict[str, Any]:
     nodes: list[dict[str, Any]] = []
     for nid in node_ids:
         flags = classify_tool(nid)
+        line = loc.get(nid)
+        location = {
+            "file": filename,
+            "line": line,
+            "function": _enclosing_function(line, fn_ranges) if line else None,
+        }
         nodes.append(
             {
                 "id": nid,
@@ -119,6 +153,7 @@ def code_to_agent(source: str, name: str = "agent-from-code") -> dict[str, Any]:
                 "external_action": flags["external_action"],
                 "consumes_external": flags["consumes_external"],
                 "human_in_loop": nid in human_nodes,
+                "location": location,
             }
         )
 
@@ -137,6 +172,6 @@ def load_code(path: str | Path) -> dict[str, Any]:
     if not p.is_file():
         raise FileNotFoundError(f"Code file not found: {p}")
     try:
-        return code_to_agent(p.read_text(encoding="utf-8"), name=p.stem)
+        return code_to_agent(p.read_text(encoding="utf-8"), name=p.stem, filename=str(path))
     except SyntaxError as exc:
         raise ValueError(f"Could not parse {p}: {exc}") from exc

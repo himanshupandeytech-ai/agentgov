@@ -42,6 +42,10 @@ architect or product owner to redesign the safety control, a code-level risk goe
 engineer (and can block a CI/pre-deploy gate), and every finding is also logged for the risk or
 compliance owner as audit evidence.
 
+When the input is **code**, each finding cites the **exact file, line, and function** to change -
+so the engineer goes straight to the spot. (Example, run on a public multi-agent repo:
+`math_agent (supervisor.py:229), math_tools (supervisor.py:234)` - an unbounded agent/tool loop.)
+
 The three layers are **not redundant** - each catches what the others cannot:
 
 | Stage | You give it | It catches (in the demos) | Like in software |
@@ -88,6 +92,9 @@ proportionate fix. That turns a scan into an **audit record** a risk owner can a
   *structure* of the agent; Inspect tests the *model's behaviour*. Together they cover both.
 - **Reasoning lives in data** (`corpus/*.yaml`), so a non-programmer governance reviewer can
   read, check, and extend the mappings without touching code.
+- **Policy as code** - the checks and their framework mappings are declarative rules in the
+  corpus: versioned, diffable, reviewable, and the same rule set runs across design, code, and
+  runtime inputs.
 
 ## Where it runs - including as a skill
 
