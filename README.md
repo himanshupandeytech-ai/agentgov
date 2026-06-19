@@ -24,9 +24,9 @@ flowchart LR
   R["RUNTIME<br/>run trace .json<br/><i>what it did</i>"]
   E(("agentgov<br/>4 risk checks"))
   M["Findings mapped to<br/>NIST AI RMF + EU AI Act"]
-  O1["Developer fix-list"]
-  O2["CI / pre-deploy gate"]
-  O3["Audit &amp; compliance register"]
+  O1["Architect / Product owner<br/>fix design &amp; safety risks"]
+  O2["Engineer<br/>code fix-list (optionally a CI gate)"]
+  O3["Risk &amp; Compliance<br/>audit register / evidence"]
 
   D --> E
   B --> E
@@ -36,6 +36,11 @@ flowchart LR
   M --> O2
   M --> O3
 ```
+
+Each finding lands with **whoever can actually fix it**: a design/architecture risk goes to the
+architect or product owner to redesign the safety control, a code-level risk goes to the
+engineer (and can block a CI/pre-deploy gate), and every finding is also logged for the risk or
+compliance owner as audit evidence.
 
 The three layers are **not redundant** - each catches what the others cannot:
 
