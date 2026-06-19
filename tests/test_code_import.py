@@ -58,6 +58,29 @@ def test_node_location_captures_line_and_function():
     assert loc["function"] == "build"  # send_email is added inside build()
 
 
+def test_toolnode_classified_by_wrapped_tools():
+    src = """
+b.add_node("tools", ToolNode([send_email]))
+"""
+    by_id = {n["id"]: n for n in code_to_agent(src)["nodes"]}
+    # node named "tools" looks harmless, but it wraps send_email -> external action
+    assert by_id["tools"]["external_action"] is True
+
+
+def test_tools_condition_loop_reconstructed():
+    # Prebuilt tools_condition gives no explicit targets, but tools -> agent exists,
+    # so agent -> tools should be reconstructed, forming the ReAct loop.
+    src = """
+b.add_node("agent", agent_node)
+b.add_node("tools", ToolNode([calc]))
+b.add_edge("tools", "agent")
+b.add_conditional_edges("agent", tools_condition)
+"""
+    edges = code_to_agent(src)["edges"]
+    assert {"from": "tools", "to": "agent"} in edges
+    assert {"from": "agent", "to": "tools"} in edges  # reconstructed
+
+
 def test_conditional_edges_dict_targets():
     src = """
 b.add_conditional_edges("router", choose, {"a": "tool_a", "b": "tool_b"})

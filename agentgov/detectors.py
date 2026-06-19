@@ -108,57 +108,72 @@ def detect_injection_to_exfiltration(agent: dict[str, Any]) -> list[Finding]:
     return findings
 
 
-def _find_cycle(adj: dict[str, list[str]]) -> list[str]:
-    """Return one directed cycle as an ordered node list, or [] if acyclic."""
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color = {n: WHITE for n in adj}
+def _cyclic_components(adj: dict[str, list[str]]) -> list[list[str]]:
+    """Return each strongly-connected component that contains a cycle.
+
+    Uses Tarjan's algorithm. A component is cyclic if it has more than one node,
+    or a single node with a self-edge. Reporting per component (rather than one
+    cycle) surfaces every distinct loop in a multi-agent graph.
+    """
+    index = {0: 0}  # boxed counter for the nested closure
+    indices: dict[str, int] = {}
+    low: dict[str, int] = {}
+    on_stack: dict[str, bool] = {}
     stack: list[str] = []
+    out: list[list[str]] = []
 
-    def visit(node: str) -> list[str]:
-        color[node] = GRAY
-        stack.append(node)
-        for nxt in adj.get(node, []):
-            if color.get(nxt, WHITE) == GRAY:  # back-edge → cycle
-                return stack[stack.index(nxt):] + [nxt]
-            if color.get(nxt, WHITE) == WHITE:
-                found = visit(nxt)
-                if found:
-                    return found
-        color[node] = BLACK
-        stack.pop()
-        return []
+    def strongconnect(v: str) -> None:
+        indices[v] = low[v] = index[0]
+        index[0] += 1
+        stack.append(v)
+        on_stack[v] = True
+        for w in adj.get(v, []):
+            if w not in indices:
+                strongconnect(w)
+                low[v] = min(low[v], low[w])
+            elif on_stack.get(w):
+                low[v] = min(low[v], indices[w])
+        if low[v] == indices[v]:
+            comp: list[str] = []
+            while True:
+                w = stack.pop()
+                on_stack[w] = False
+                comp.append(w)
+                if w == v:
+                    break
+            self_loop = len(comp) == 1 and comp[0] in adj.get(comp[0], [])
+            if len(comp) > 1 or self_loop:
+                out.append(comp)
 
-    for start in adj:
-        if color[start] == WHITE:
-            cycle = visit(start)
-            if cycle:
-                return cycle
-    return []
+    for v in adj:
+        if v not in indices:
+            strongconnect(v)
+    return out
 
 
 def detect_unbounded_delegation_loop(agent: dict[str, Any]) -> list[Finding]:
-    """A delegation cycle exists with no declared depth/step budget."""
+    """Each delegation loop with no declared depth/step budget is one finding."""
     limits = agent.get("limits", {}) or {}
     if limits.get("max_delegation_depth") or limits.get("max_steps"):
         return []  # bounded → not a finding
-    cycle = _find_cycle(_adjacency(agent))
-    if not cycle:
-        return []
-    # High if the cycle can reach an external-action node, else medium.
     nodes = _nodes_by_id(agent)
-    acts = any(nodes.get(n, {}).get("external_action") for n in cycle)
-    return [
-        Finding(
-            pattern_id="unbounded_delegation_loop",
-            severity="high" if acts else "medium",
-            nodes=cycle,
-            evidence=(
-                f"Directed cycle {' → '.join(cycle)} with no declared "
-                f"max_delegation_depth or max_steps."
-            ),
-            context={"cycle": " → ".join(cycle)},
+    findings: list[Finding] = []
+    for comp in _cyclic_components(_adjacency(agent)):
+        ordered = sorted(comp)
+        acts = any(nodes.get(n, {}).get("external_action") for n in comp)
+        findings.append(
+            Finding(
+                pattern_id="unbounded_delegation_loop",
+                severity="high" if acts else "medium",
+                nodes=ordered,
+                evidence=(
+                    f"Delegation loop among {', '.join(ordered)} with no declared "
+                    f"max_delegation_depth or max_steps."
+                ),
+                context={"cycle": " ↔ ".join(ordered)},
+            )
         )
-    ]
+    return findings
 
 
 def detect_missing_oversight(agent: dict[str, Any]) -> list[Finding]:
