@@ -1,0 +1,32 @@
+{
+  "name": "ops-assistant (from LangSmith trace)",
+  "model": {
+    "name": "Claude Opus 4.8 (claude-opus-4-8)",
+    "system_card": {
+      "url": "https://www-cdn.anthropic.com/0b4915911bb0d19eca5b5ee635c80fef830a37ea.pdf",
+      "note": "The system card recommends human oversight for consequential outbound actions; this run executed a funds transfer with no recorded approval step."
+    }
+  },
+  "_comment": "RUNTIME-PHASE demo. This is what the agent ACTUALLY did on one run: it planned, then executed a real money transfer. No approval step was recorded. Design and code review might miss this if the tool is chosen dynamically - only the run reveals it happened.",
+  "runs": [
+    {
+      "id": "run-1",
+      "name": "ops_agent",
+      "run_type": "chain",
+      "parent_run_id": null
+    },
+    {
+      "id": "run-2",
+      "name": "plan_actions",
+      "run_type": "llm",
+      "parent_run_id": "run-1"
+    },
+    {
+      "id": "run-3",
+      "name": "transfer_funds",
+      "run_type": "tool",
+      "parent_run_id": "run-1",
+      "inputs": { "to_account": "ACME-99", "amount": 25000 }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# NIST AI Risk Management Framework (AI RMF 1.0) - reference slice.
+# Source: NIST AI 100-1, https://nvlpubs.nist.gov/nistpubs/ai/nist.ai.100-1.pdf
+#         Playbook, https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook
+# License: U.S. Government work - public domain. Free to reuse.
+#
+# Curated slice only - the subcategories referenced by risk_patterns.yaml.
+# Full ingestion of the Playbook is the later corpus-expansion phase.
+
+framework: "NIST AI RMF 1.0"
+functions:
+  GOVERN: "Cultivate and maintain a culture of risk management; policies, accountability, and oversight."
+  MAP: "Establish context; identify and frame risks for a given AI system and use case."
+  MEASURE: "Analyze, assess, benchmark, and monitor AI risks and trustworthiness characteristics."
+  MANAGE: "Allocate resources to and act on mapped and measured risks; respond, recover, communicate."
+
+subcategories:
+  GOVERN-1.4: "The risk management process and its outcomes are established through transparent policies, procedures, and documentation."
+  MEASURE-2.6: "The AI system is evaluated regularly for safety risks, including potential for unanticipated, unsafe, or emergent behavior."
+  MEASURE-2.7: "AI system security and resilience - e.g., to adversarial attacks - are evaluated and documented."
+  MANAGE-2.3: "Mechanisms are in place and applied to supervise, override, or disengage AI system actions when warranted."

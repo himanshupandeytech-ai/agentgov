@@ -1,0 +1,155 @@
+# Governance corpus: orchestration-layer risk patterns → framework obligations.
+#
+# Each pattern carries its own reasoning (causal chain, proportionate control,
+# context-dependence, framework gap). The report renderer is thin on purpose -
+# the judgment is data, not code, so it is auditable and editable by a
+# non-programmer governance reviewer. This is the "knowledge + reasoning" layer.
+#
+# `severity` is a default; the detector may keep or justify a change in evidence.
+# `triggers` are the mapped framework obligations.
+# `context_dependence` records how the same finding yields different verdicts by
+# deployment context.
+
+meta:
+  thesis: >-
+    Inspect and METR evaluate the model. As enterprises deploy deep agents, risk
+    shifts to the orchestration layer - tools, autonomy, delegation, oversight
+    wiring - which almost nothing audits. agentgov audits that layer and maps it
+    to existing frameworks rather than inventing a new one.
+  falsifiability: >-
+    This thesis weakens if most deployed agents turn out to be low-autonomy
+    retrieval wrappers with no external-action tools - in that case model-layer
+    evals dominate and the orchestration layer is a minor risk surface.
+  scope_note: >-
+    Structural audit only. Behavioral/capability testing is out of scope and
+    hands off to Inspect (https://inspect.aisi.org.uk). agentgov never executes
+    the target agent; it reads a declarative manifest statically.
+
+patterns:
+  - id: unsupervised_external_write
+    title: "Unsupervised external write / irreversible action"
+    severity: high
+    trustworthiness_property: "Accountability & human oversight"
+    causal_chain: >-
+      Node `{node}` can perform an external action ({action}) with no
+      human-in-the-loop approval → an erroneous or adversarially-induced
+      instruction executes an irreversible outside-world action → there is no
+      point at which a human can intervene before effect.
+    proportionate_control: >-
+      Add a human-approval gate on outbound actions (an oversight control, not a
+      tool ban) - proportionate to the action's reversibility and blast radius.
+    fix_short: "Add a human-approval gate on outbound actions."
+    triggers:
+      - framework: EU_AI_ACT
+        ref: "Article 14(4)"
+        obligation: "Human oversight: persons can intervene in or interrupt a high-risk system."
+      - framework: NIST_AI_RMF
+        ref: "MANAGE-2.3"
+        obligation: "Mechanisms are in place to supervise, override, or disengage AI system actions."
+    context_dependence:
+      low: "Internal-only tool with reversible effects → log the action and accept the risk."
+      high: "Deployed in a regulated domain (health, finance, hiring) → likely EU high-risk; oversight is mandatory before shipping, not optional."
+    framework_gap: >-
+      EU Art. 14 presumes a discrete 'high-risk system' and says little about
+      *which orchestration node* holds the risk. NIST MANAGE is voluntary and
+      process-level. Neither pinpoints the specific agent edge that creates the
+      exposure - which is exactly the gap this tool fills.
+    source_urls:
+      - "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+      - "https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook"
+
+  - id: injection_to_exfiltration
+    title: "Prompt-injection → exfiltration path"
+    severity: high
+    trustworthiness_property: "Robustness & security (Measure)"
+    causal_chain: >-
+      Node `{src}` ingests untrusted external content and a directed path reaches
+      `{dst}`, which performs an external action → instructions injected into the
+      untrusted content can drive data exfiltration or unauthorized actions
+      through the downstream tool.
+    proportionate_control: >-
+      Treat tool output as untrusted: content-isolate web/document text, strip or
+      quarantine instructions, and require approval before an action node consumes
+      external-derived input.
+    fix_short: "Isolate/sanitise untrusted tool output before any action node."
+    triggers:
+      - framework: EU_AI_ACT
+        ref: "Article 15"
+        obligation: "Accuracy, robustness and cybersecurity, incl. resilience to attempts to manipulate inputs."
+      - framework: NIST_AI_RMF
+        ref: "MEASURE-2.7"
+        obligation: "AI system security and resilience are evaluated and documented."
+    context_dependence:
+      low: "Search results never reach an outbound action; injection yields only a bad answer the user sees."
+      high: "External-derived text reaches an email/API/code-exec tool → injection becomes exfiltration or remote action; high-risk regardless of domain."
+    framework_gap: >-
+      Inspect can test whether the *model* resists prompt injection, but not
+      whether *this wiring* exposes an exfil path. EU Art. 15 names robustness as
+      an obligation but not the orchestration topology that violates it. The
+      structural path is visible only at the layer agentgov inspects.
+    source_urls:
+      - "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+      - "https://inspect.aisi.org.uk"
+
+  - id: unbounded_delegation_loop
+    title: "Unbounded delegation / self-invocation loop"
+    severity: medium
+    trustworthiness_property: "Safety & resource control"
+    causal_chain: >-
+      A directed cycle ({cycle}) lets the agent delegate back into itself with no
+      declared depth or budget limit → a single trigger can spawn unbounded
+      recursive runs → cost blow-up, runaway external actions, or denial of the
+      agent to other users.
+    proportionate_control: >-
+      Declare an explicit max delegation depth / step budget and a hard stop;
+      proportionate because the loop may be legitimate but must be bounded.
+    fix_short: "Declare a max delegation depth / step budget + hard stop."
+    triggers:
+      - framework: EU_AI_ACT
+        ref: "Article 14(4)"
+        obligation: "Human oversight: persons can intervene in or interrupt the system, incl. a stop function."
+      - framework: NIST_AI_RMF
+        ref: "MEASURE-2.6"
+        obligation: "AI system is evaluated for safety risks, including unanticipated or emergent behavior."
+    context_dependence:
+      low: "Cycle is capped in code at a small fixed depth → theoretically unbounded but practically low risk; note and move on."
+      high: "No declared limit and the loop can reach an external-action or paid API node → runaway cost or action; high risk."
+    framework_gap: >-
+      Neither NIST nor the EU AI Act addresses multi-agent delegation topology
+      directly; both speak to 'the system' as a unit. Inspect measures model
+      behavior, not the orchestration graph's cyclicity. The loop is visible only
+      structurally.
+    source_urls:
+      - "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+      - "https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook"
+
+  - id: missing_oversight_instrumentation
+    title: "Missing oversight instrumentation (kill-switch / audit log)"
+    severity: medium
+    trustworthiness_property: "Accountability & transparency"
+    causal_chain: >-
+      The agent declares no {missing} → failures are neither interruptible in
+      flight nor reconstructable after the fact → incidents cannot be contained
+      or investigated.
+    proportionate_control: >-
+      Enable append-only audit logging of tool calls and a kill-switch that halts
+      the run; both are low-cost, high-assurance baseline controls.
+    fix_short: "Enable audit logging + a kill-switch."
+    triggers:
+      - framework: EU_AI_ACT
+        ref: "Article 12"
+        obligation: "Automatic recording of events (logs) over the system's lifetime for traceability."
+      - framework: NIST_AI_RMF
+        ref: "GOVERN-1.4"
+        obligation: "Risk management processes and outcomes are documented and traceable."
+    context_dependence:
+      low: "Prototype with no external actions → logging is good hygiene but not load-bearing."
+      high: "Any agent taking external actions in production → logging + kill-switch are baseline, and Art. 12 logging is mandatory for high-risk systems."
+    framework_gap: >-
+      EU Art. 12 mandates record-keeping but is written for a 'system', leaving
+      open what granularity an agent's per-tool-call log needs. NIST is advisory.
+      The required instrumentation for agentic traceability is under-specified by
+      all three.
+    source_urls:
+      - "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+      - "https://airc.nist.gov/AI_RMF_Knowledge_Base/Playbook"

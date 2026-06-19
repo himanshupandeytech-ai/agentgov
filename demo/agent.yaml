@@ -1,0 +1,46 @@
+# DESIGN-PHASE demo. You are reviewing the agent's planned architecture before any
+# code is written. The flaw here is structural: a planner delegates to a worker that
+# can call the planner back - a loop with no declared depth or budget limit, and one
+# of the looping steps takes a real external action. A single trigger could spin
+# forever, racking up cost or repeating the action.
+#
+# Everything else is done right (the action has a human-approval gate, oversight is
+# enabled), so the audit isolates exactly one issue: the unbounded delegation loop.
+
+name: research-orchestrator
+description: "A planner delegates research to a worker, which can hand back for another round."
+
+model:
+  name: "Claude Opus 4.8 (claude-opus-4-8)"
+
+nodes:
+  - id: planner
+    kind: llm
+    external_action: false
+    consumes_external: false
+    human_in_loop: false
+
+  - id: worker
+    kind: llm
+    external_action: false
+    consumes_external: false
+    human_in_loop: false
+
+  - id: post_update
+    kind: tool
+    tool: post.status_update
+    external_action: true          # a real outbound action inside the loop
+    consumes_external: false
+    human_in_loop: true            # but it IS gated - so no unsupervised-write finding
+
+# planner -> worker -> planner is a cycle; post_update sits inside it.
+edges:
+  - { from: planner, to: worker }
+  - { from: worker, to: post_update }
+  - { from: post_update, to: planner }
+
+# Oversight is in place, so the only thing left to flag is the loop itself.
+oversight:
+  kill_switch: true
+  audit_log: true
+# Note: no `limits:` block -> the loop is unbounded.

@@ -1,0 +1,19 @@
+# EU AI Act - Regulation (EU) 2024/1689 - reference slice.
+# Source: EUR-Lex, https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng
+# Reuse: European Commission reuse policy (Decision 2011/833/EU) - free reuse,
+#        including commercial, with acknowledgement of source.
+#
+# Curated slice only - the articles referenced by risk_patterns.yaml. Paraphrased
+# summaries, not verbatim legal text; cite EUR-Lex for the authoritative wording.
+
+regulation: "Regulation (EU) 2024/1689 (EU AI Act)"
+articles:
+  "Article 12":
+    title: "Record-keeping"
+    summary: "High-risk AI systems must technically allow automatic recording of events (logs) over their lifetime to ensure traceability of functioning."
+  "Article 14(4)":
+    title: "Human oversight"
+    summary: "Oversight measures must enable assigned persons to intervene in, interrupt, or halt a high-risk system (incl. a stop button), and to remain aware of automation bias."
+  "Article 15":
+    title: "Accuracy, robustness and cybersecurity"
+    summary: "High-risk systems must achieve appropriate accuracy and robustness and be resilient against errors, faults, and attempts to manipulate them (e.g., adversarial inputs, data poisoning)."

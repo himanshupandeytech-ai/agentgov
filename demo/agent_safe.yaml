@@ -1,0 +1,50 @@
+# Demo deep agent - the SAME research assistant, but with proportionate controls
+# applied. Shows agentgov is not a false-positive machine: when the orchestration
+# layer is wired correctly, the report comes back clean.
+#
+# Differences from demo/agent.yaml:
+#   - the email action requires human approval (human_in_loop: true)
+#   - email content comes from the user, not from web search, so no untrusted
+#     path reaches the outbound action (no injection→exfil edge)
+#   - oversight instrumentation is enabled (kill-switch + audit log)
+
+name: research-assistant-governed
+description: "Searches the web, drafts findings; emails a summary only on human approval."
+
+model:
+  name: "Claude Opus 4.8 (claude-opus-4-8)"
+  system_card:
+    url: "https://www-cdn.anthropic.com/0b4915911bb0d19eca5b5ee635c80fef830a37ea.pdf"
+    note: >-
+      Same model as the ungoverned demo; here the deployment supplies the human
+      oversight the system card recommends for consequential outbound actions.
+
+nodes:
+  - id: web_search
+    kind: tool
+    tool: web.search
+    consumes_external: true
+    external_action: false
+    human_in_loop: false
+
+  - id: summarize
+    kind: llm
+    consumes_external: false
+    external_action: false
+    human_in_loop: false
+
+  - id: send_email
+    kind: tool
+    tool: email.send
+    consumes_external: false
+    external_action: true
+    human_in_loop: true           # approval gate on the outbound action
+
+# Email is composed from user input, not from web_search output: the untrusted
+# search path terminates at `summarize` and never reaches the action node.
+edges:
+  - { from: web_search, to: summarize }
+
+oversight:
+  kill_switch: true
+  audit_log: true
