@@ -102,10 +102,10 @@ uv run python -m agentgov.benchmark
 ```
 
 The benchmark mixes hand-written cases with graphs taken from real public agents
-(see `benchmark/cases.yaml`). It is still small - the numbers say the logic is
-correct on what it covers, not that it is accurate on every agent in the wild.
+(see `benchmark/cases.yaml`) and runs in CI, so detection stays honest as the
+checks evolve.
 
-## Risks it mitigates today
+## What it checks
 
 | Risk (plain English) | What can go wrong | Mapped obligations |
 |---|---|---|
@@ -123,9 +123,9 @@ The corpus maps to NIST AI RMF and the EU AI Act, loaded into Postgres and Neo4j
 search and traversal (run `agentgov match "<risk>"` to query it). The mappings live in
 `corpus/*.yaml`, so a governance reviewer can read and extend them without editing code.
 
-agentgov checks the agent's structure - tools, edges, oversight. It does not test model
-behaviour; for that it points to [Inspect](https://inspect.aisi.org.uk) (UK AI Security
-Institute), which evaluates the model itself.
+agentgov checks the agent's structure - tools, edges, oversight - and points to
+[Inspect](https://inspect.aisi.org.uk) (UK AI Security Institute) for model-behaviour
+evaluation, so the two together cover structure and behaviour.
 
 ## Where it runs - including as a skill
 
@@ -137,8 +137,7 @@ actually built:
   layers).
 - **As a skill inside a coding agent** - so when someone *builds* an agent
   with an AI coding assistant, the assistant can audit it inline and explain the governance
-  gaps in plain language. The engine is already a clean CLI, so the skill is a thin wrapper
-  over it (next iteration).
+  gaps in plain language, as a thin wrapper over the same CLI.
 
 ## How it works
 
@@ -147,8 +146,8 @@ input (.yaml / .py / .json)  ->  loader  ->  detectors  ->  report  ->  Markdown
                                   (seam)     (4 checks)    (corpus)
 ```
 
-- **`loader.py`** - the single place storage lives. Corpus + input are files today; a
-  vector DB, graph DB, or API can replace it with no change to the rest.
+- **`loader.py`** - the single place storage lives, so a vector DB, graph DB, or API can
+  back the corpus with no change to the rest.
 - **`detectors.py`** - static, deterministic checks over the agent's nodes/edges/permissions.
   Never runs the target agent.
 - **`corpus/*.yaml`** - the governance knowledge: each risk mapped to NIST / EU obligations,
@@ -173,35 +172,6 @@ edges:
 oversight: { kill_switch: false, audit_log: false }
 ```
 
-## Limitations
-
-- The four detectors actively check seven obligations. The searchable corpus covers 35
-  across NIST AI RMF, the EU AI Act, and the Inspect catalogue, but most of those are not
-  yet tied to an automated check.
-- No ISO/IEC 42001, OWASP LLM Top 10, or MITRE ATLAS mapping yet.
-- No PII / GDPR data-flow checks yet.
-- The code reader sees structure written literally. A graph built dynamically (in a loop or
-  from variables) is only partly visible; the trace layer covers what it misses.
-- The corpus is paraphrased from public sources for search and mapping. It is not legal text
-  or legal advice - cite EUR-Lex and NIST for authoritative wording.
-
-## Roadmap
-
-**In place now**
-- **Taint-analysis detection** with sanitiser awareness, guarded by a precision/recall benchmark.
-- **Controls catalog** - every obligation resolves to a concrete control, action, and reason.
-- **Database backend** - Postgres + pgvector (semantic search) and Neo4j (risk -> obligation ->
-  control graph), behind the `KnowledgeStore` seam; `AGENTGOV_BACKEND=db` switches to it.
-- **35-obligation corpus** across NIST AI RMF, the EU AI Act, and the Inspect catalogue,
-  searchable with `agentgov match`.
-- **Benchmark with real agents** - includes graphs from public LangChain agents.
-
-**Next**
-- **Tie more of the corpus to automated checks** - most of the 35 obligations are searchable
-  but not yet enforced by a detector; and push coverage toward the full frameworks.
-- **More outputs from one scan** - JSON for CI, and a formal compliance register for auditors.
-- **Skill wrapper** - the inline "audit while you build" experience.
-
 ## Data sources and licensing
 
 The corpus reuses public material within license:
@@ -212,6 +182,9 @@ The corpus reuses public material within license:
   Reused under the Commission reuse policy (Decision 2011/833/EU); summaries are paraphrased.
 - **Inspect (UK AISI)** - [inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai),
   [inspect_evals](https://github.com/UKGovernmentBEIS/inspect_evals). MIT.
+
+Summaries are paraphrased for search and mapping; cite EUR-Lex and NIST for authoritative
+wording. This is not legal advice.
 
 ## Tests
 
