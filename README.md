@@ -73,6 +73,9 @@ uv run agentgov audit demo/agent.yaml -o out.md  # or write the report to a file
 
 Input type is auto-detected: `.yaml` = manifest, `.py` = LangGraph code, `.json` = run trace.
 
+See [examples/real-world-runs.md](examples/real-world-runs.md) for `agentgov` run against
+public agents (incl. [gpt-researcher](https://github.com/assafelovic/gpt-researcher), ~27.8k★).
+
 ### Database mode (optional)
 
 By default the corpus is YAML and the tool runs fully offline. To use the database
