@@ -4,13 +4,13 @@
 can call, what it can do with them, where a human signs off) and flags the parts that would
 fail an AI governance review.
 
-Tools like Inspect and METR test the underlying model. They don't look at the system you build
+Tools like Inspect and METR test the underlying model. They are not focused on the system you build
 on top of it, which is where a lot of the actual risk lives: an agent that can email customers
 or move money on its own, a web-search result that feeds straight into a tool call, a loop with
 no stop condition. `agentgov` looks at that layer and ties each problem back to the specific
 **NIST AI RMF** or **EU AI Act** clause it touches, with a fix.
 
-It takes three kinds of input - a design manifest, the LangGraph source, or a LangSmith run
+It can take three kinds of input - a design manifest, the LangGraph source, or a LangSmith run
 trace - so you can run the same checks while designing, in CI, and against production logs.
 
 > One of the demo agents was wired to **transfer $25,000 without a human approval step**. It is
