@@ -40,6 +40,7 @@ class YamlKnowledgeStore:
         self._controls = _read_packaged("controls.yaml").get("controls", {})
         self._nist = _read_packaged("nist.yaml")
         self._eu = _read_packaged("eu_ai_act.yaml")
+        self._inspect = _read_packaged("inspect.yaml")
         self._by_id = {p["id"]: p for p in self._patterns_doc["patterns"]}
 
     def meta(self) -> dict[str, Any]:
@@ -66,7 +67,7 @@ class YamlKnowledgeStore:
         return resolved
 
     def frameworks(self) -> dict[str, Any]:
-        return {"nist": self._nist, "eu_ai_act": self._eu}
+        return {"nist": self._nist, "eu_ai_act": self._eu, "inspect": self._inspect}
 
     def as_corpus(self) -> dict[str, Any]:
         return {

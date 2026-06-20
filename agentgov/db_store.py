@@ -60,7 +60,7 @@ class DbKnowledgeStore:
         for framework, ref, title, summary in rows:
             if framework == "NIST_AI_RMF":
                 nist["subcategories"][ref] = summary
-            else:
+            elif framework == "EU_AI_ACT":
                 eu["articles"][ref] = {"title": title, "summary": summary}
         return {"nist": nist, "eu_ai_act": eu}
 

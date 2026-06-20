@@ -1,0 +1,15 @@
+# Inspect (UK AI Security Institute) evaluation catalogue - category reference.
+# Source: https://github.com/UKGovernmentBEIS/inspect_evals (MIT).
+#
+# Inspect tests model/agent *behaviour*; agentgov audits *structure* and points to
+# the relevant Inspect category when a behavioural eval is the right next step.
+
+framework: "Inspect (UK AISI) evaluation catalogue"
+categories:
+  cybersecurity: "Offensive and defensive cyber capability evaluations (CTF, exploitation, vulnerability discovery)."
+  agentic: "Agentic task evaluations - tool use, autonomy, and multi-step task completion."
+  reasoning: "Reasoning and problem-solving evaluations across domains."
+  knowledge: "Factual knowledge and question-answering evaluations."
+  safeguards: "Refusal, jailbreak-resistance, and safety-guardrail evaluations."
+  coding: "Software engineering and code-generation capability evaluations."
+  prompt_injection: "Resistance to instructions injected via tool output or external content."

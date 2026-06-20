@@ -8,12 +8,36 @@
 
 regulation: "Regulation (EU) 2024/1689 (EU AI Act)"
 articles:
+  "Article 9":
+    title: "Risk management system"
+    summary: "A continuous, iterative risk management system must be established for high-risk AI systems across their lifecycle, identifying and mitigating reasonably foreseeable risks."
+  "Article 10":
+    title: "Data and data governance"
+    summary: "Training, validation, and testing data must meet quality criteria and be subject to appropriate data governance, including examination for bias."
+  "Article 11":
+    title: "Technical documentation"
+    summary: "Technical documentation demonstrating conformity must be drawn up before a high-risk system is placed on the market and kept up to date."
   "Article 12":
     title: "Record-keeping"
     summary: "High-risk AI systems must technically allow automatic recording of events (logs) over their lifetime to ensure traceability of functioning."
+  "Article 13":
+    title: "Transparency and provision of information to deployers"
+    summary: "High-risk systems must be sufficiently transparent for deployers to interpret output and use them appropriately, with clear instructions for use."
   "Article 14(4)":
     title: "Human oversight"
     summary: "Oversight measures must enable assigned persons to intervene in, interrupt, or halt a high-risk system (incl. a stop button), and to remain aware of automation bias."
   "Article 15":
     title: "Accuracy, robustness and cybersecurity"
     summary: "High-risk systems must achieve appropriate accuracy and robustness and be resilient against errors, faults, and attempts to manipulate them (e.g., adversarial inputs, data poisoning)."
+  "Article 16":
+    title: "Obligations of providers of high-risk AI systems"
+    summary: "Providers must ensure their high-risk systems comply with the requirements, operate a quality management system, and keep documentation and logs."
+  "Article 26":
+    title: "Obligations of deployers of high-risk AI systems"
+    summary: "Deployers must use high-risk systems per instructions, assign competent human oversight, monitor operation, and keep logs."
+  "Article 50":
+    title: "Transparency obligations for certain AI systems"
+    summary: "Providers and deployers must inform people when they interact with an AI system or with AI-generated or manipulated content, where not obvious."
+  "Article 72":
+    title: "Post-market monitoring"
+    summary: "Providers must establish a post-market monitoring system to collect and review experience from the use of their high-risk systems."

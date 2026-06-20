@@ -90,19 +90,20 @@ uv run --extra db agentgov match "the agent sends money with no approval"
 
 ## Accuracy
 
-Detection is **taint analysis**, not keyword matching: untrusted input is traced
-along the graph to action sinks, and a **sanitiser node stops the taint** - so a
-defended path is not flagged. A labelled benchmark (`benchmark/cases.yaml`) guards
-this, including deliberate false-positive traps (a sanitised injection path, a
-bounded loop):
+Detection traces untrusted input through the agent's graph to the points where it
+can take an action. If a sanitiser sits on that path, the path is treated as
+handled and nothing is reported. `benchmark/cases.yaml` holds labelled examples,
+including a sanitised path and a bounded loop that should produce no finding, and
+the runner reports precision and recall:
 
 ```bash
 uv run python -m agentgov.benchmark
-#  TP=4  FP=0  FN=0   precision=1.0  recall=1.0  f1=1.0
+#  precision=1.0  recall=1.0  f1=1.0   (FP=0  FN=0)
 ```
 
-The benchmark is small and curated; the honest next step is expanding it with
-real-world agents to find the cases where precision drops.
+The benchmark mixes hand-written cases with graphs taken from real public agents
+(see `benchmark/cases.yaml`). It is still small - the numbers say the logic is
+correct on what it covers, not that it is accurate on every agent in the wild.
 
 ## Risks it mitigates today
 
@@ -115,19 +116,16 @@ real-world agents to find the cases where precision drops.
 
 ## Compliance and audit readiness
 
-Every finding is traceable evidence: the exact rule it touches, the node it lives on, and a
-proportionate fix. That turns a scan into an **audit record** a risk owner can act on.
+Each finding is an audit record: the rule it touches, the node it lives on, and the fix.
+A risk owner can act on it directly.
 
-- **Frameworks mapped today:** EU AI Act Articles **12, 14, 15**; NIST AI RMF **GOVERN-1.4,
-  MEASURE-2.6, MEASURE-2.7, MANAGE-2.3**.
-- **Behavioural testing is out of scope on purpose** - it hands off to
-  [Inspect](https://inspect.aisi.org.uk) (UK AI Security Institute). `agentgov` audits the
-  *structure* of the agent; Inspect tests the *model's behaviour*. Together they cover both.
-- **Reasoning lives in data** (`corpus/*.yaml`), so a non-programmer governance reviewer can
-  read, check, and extend the mappings without touching code.
-- **Policy as code** - the checks and their framework mappings are declarative rules in the
-  corpus: versioned, diffable, reviewable, and the same rule set runs across design, code, and
-  runtime inputs.
+The corpus maps to NIST AI RMF and the EU AI Act, loaded into Postgres and Neo4j for
+search and traversal (run `agentgov match "<risk>"` to query it). The mappings live in
+`corpus/*.yaml`, so a governance reviewer can read and extend them without editing code.
+
+agentgov checks the agent's structure - tools, edges, oversight. It does not test model
+behaviour; for that it points to [Inspect](https://inspect.aisi.org.uk) (UK AI Security
+Institute), which evaluates the model itself.
 
 ## Where it runs - including as a skill
 
@@ -175,19 +173,17 @@ edges:
 oversight: { kill_switch: false, audit_log: false }
 ```
 
-## What it does not cover yet (honest scope)
+## Limitations
 
-This is an early, deliberately small tool. Known gaps, on the roadmap:
-
-- **More of the law.** Only 3 EU articles and 4 NIST subcategories are mapped. Missing: EU
-  Art. 9 (risk management), Art. 10 (data governance), Art. 13 (transparency), Annex III
-  high-risk classification; the full NIST MAP/MEASURE/MANAGE set.
-- **Other frameworks.** No ISO/IEC 42001, OWASP LLM Top 10, or MITRE ATLAS mapping yet.
-- **Data / PII flows.** No GDPR or PII-to-external-tool checks yet.
-- **Dynamic graphs.** The code reader sees structure written literally; a graph built in a
-  loop is only partly visible - the runtime trace layer backstops this.
-- **Not legal advice.** The corpus is a curated, paraphrased slice of public material; cite
-  EUR-Lex / NIST for authoritative text.
+- The four detectors actively check seven obligations. The searchable corpus covers 35
+  across NIST AI RMF, the EU AI Act, and the Inspect catalogue, but most of those are not
+  yet tied to an automated check.
+- No ISO/IEC 42001, OWASP LLM Top 10, or MITRE ATLAS mapping yet.
+- No PII / GDPR data-flow checks yet.
+- The code reader sees structure written literally. A graph built dynamically (in a loop or
+  from variables) is only partly visible; the trace layer covers what it misses.
+- The corpus is paraphrased from public sources for search and mapping. It is not legal text
+  or legal advice - cite EUR-Lex and NIST for authoritative wording.
 
 ## Roadmap
 
@@ -196,12 +192,13 @@ This is an early, deliberately small tool. Known gaps, on the roadmap:
 - **Controls catalog** - every obligation resolves to a concrete control, action, and reason.
 - **Database backend** - Postgres + pgvector (semantic search) and Neo4j (risk -> obligation ->
   control graph), behind the `KnowledgeStore` seam; `AGENTGOV_BACKEND=db` switches to it.
-- **`match` command** - semantic search of a free-text risk against the obligations.
-- **Runs on real repos** - verified on a public multi-agent LangGraph project.
+- **35-obligation corpus** across NIST AI RMF, the EU AI Act, and the Inspect catalogue,
+  searchable with `agentgov match`.
+- **Benchmark with real agents** - includes graphs from public LangChain agents.
 
 **Next**
-- **Ingest the full frameworks** - the complete NIST / EU / Inspect content, not the curated slice.
-- **Grow the benchmark** with real-world agents to find where precision drops.
+- **Tie more of the corpus to automated checks** - most of the 35 obligations are searchable
+  but not yet enforced by a detector; and push coverage toward the full frameworks.
 - **More outputs from one scan** - JSON for CI, and a formal compliance register for auditors.
 - **Skill wrapper** - the inline "audit while you build" experience.
 

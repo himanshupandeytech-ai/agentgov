@@ -81,3 +81,24 @@ cases:
       edges:
         - { from: web_search, to: summarize }
       oversight: { kill_switch: true, audit_log: true }
+
+  # Graphs taken from real public LangGraph agents (audited as-is, see README).
+  - name: real_langchain_react_agent   # github.com/langchain-ai/react-agent (MIT)
+    expect: [unbounded_delegation_loop]
+    agent:
+      nodes:
+        - { id: call_model }
+        - { id: tools }
+      edges:
+        - { from: call_model, to: tools }
+        - { from: tools, to: call_model }
+
+  - name: real_data_enrichment   # github.com/langchain-ai/data-enrichment (MIT)
+    expect: [unbounded_delegation_loop]
+    agent:
+      nodes:
+        - { id: call_agent_model }
+        - { id: tools }
+      edges:
+        - { from: call_agent_model, to: tools }
+        - { from: tools, to: call_agent_model }

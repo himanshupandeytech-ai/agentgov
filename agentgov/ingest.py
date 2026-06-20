@@ -18,30 +18,28 @@ from .knowledge import YamlKnowledgeStore
 
 
 def _obligations(store: YamlKnowledgeStore) -> dict[str, dict]:
-    """Build obligation records keyed by FRAMEWORK:ref from patterns + framework text."""
-    nist = store.frameworks()["nist"].get("subcategories", {})
-    eu = store.frameworks()["eu_ai_act"].get("articles", {})
+    """Build obligation records for the whole corpus, keyed by FRAMEWORK:ref.
+
+    Covers every framework entry (not only the ones a detector references), so
+    semantic search spans the full corpus.
+    """
+    fw = store.frameworks()
     obligations: dict[str, dict] = {}
-    for pattern in store.patterns():
-        for t in pattern.get("triggers", []):
-            key = f"{t['framework']}:{t['ref']}"
-            if key in obligations:
-                continue
-            if t["framework"] == "EU_AI_ACT":
-                meta = eu.get(t["ref"], {})
-                title = meta.get("title", t["ref"])
-                summary = meta.get("summary", t["obligation"])
-            else:
-                title = t["ref"]
-                summary = nist.get(t["ref"], t["obligation"])
-            obligations[key] = {
-                "key": key,
-                "framework": t["framework"],
-                "ref": t["ref"],
-                "title": title,
-                "summary": summary,
-                "text": f"{t['ref']} {title}. {summary} {t['obligation']}",
-            }
+
+    def add(framework: str, ref: str, title: str, summary: str) -> None:
+        key = f"{framework}:{ref}"
+        obligations[key] = {
+            "key": key, "framework": framework, "ref": ref,
+            "title": title, "summary": summary,
+            "text": f"{ref} {title}. {summary}",
+        }
+
+    for ref, text in fw["nist"].get("subcategories", {}).items():
+        add("NIST_AI_RMF", ref, ref, text)
+    for ref, meta in fw["eu_ai_act"].get("articles", {}).items():
+        add("EU_AI_ACT", ref, meta.get("title", ref), meta.get("summary", ""))
+    for ref, text in fw["inspect"].get("categories", {}).items():
+        add("INSPECT", ref, ref, text)
     return obligations
 
 
