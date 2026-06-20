@@ -1,19 +1,21 @@
 # agentgov
 
-**Governance for AI agents - built into the product lifecycle, not bolted on at the end.**
+`agentgov` is a static analyzer for LLM agents. It reads how an agent is wired (what tools it
+can call, what it can do with them, where a human signs off) and flags the parts that would
+fail an AI governance review.
 
-Model evaluations (Inspect, METR) tell you whether the *model* is safe. They say nothing
-about the *agent you built around it* - the tools it can call, the actions it can take, and
-whether a human is in the loop. That is where most real-world risk lives, and almost nothing
-checks it.
+Tools like Inspect and METR test the underlying model. They don't look at the system you build
+on top of it, which is where a lot of the actual risk lives: an agent that can email customers
+or move money on its own, a web-search result that feeds straight into a tool call, a loop with
+no stop condition. `agentgov` looks at that layer and ties each problem back to the specific
+**NIST AI RMF** or **EU AI Act** clause it touches, with a fix.
 
-`agentgov` checks it, at **every stage of building an agent** - design, code, and runtime -
-and maps each problem it finds to a real obligation in the **NIST AI RMF** and the
-**EU AI Act**. One scan, plain-English findings, audit-ready.
+It takes three kinds of input - a design manifest, the LangGraph source, or a LangSmith run
+trace - so you can run the same checks while designing, in CI, and against production logs.
 
-> Real example from the demos: an agent quietly wired itself to **transfer $25,000 with no
-> human approval**. Design review can miss it. `agentgov` catches it - and tells you which
-> oversight rule it breaks and how to fix it.
+> One of the demo agents was wired to **transfer $25,000 without a human approval step**. It is
+> easy to miss in a design review; `agentgov` flags it, names the oversight clause it breaks,
+> and points at the line to change.
 
 ## Governance across the lifecycle
 
