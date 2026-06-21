@@ -54,9 +54,12 @@ def _render_finding(
     agent: dict[str, Any],
     controls: dict[str, Any],
 ) -> list[str]:
+    from .scoring import score_finding
+
     lines: list[str] = []
     sev = finding.severity.upper()
-    lines.append(f"### {idx}. [{sev}] {pattern['title']}")
+    score = score_finding(finding, pattern)
+    lines.append(f"### {idx}. [{sev} · risk {score}/100] {pattern['title']}")
     if finding.nodes:
         lines.append(f"**Where:** {_format_where(finding.nodes, agent)}")
     lines.append("")
@@ -137,6 +140,9 @@ def render_summary(agent: dict[str, Any], findings: list[Finding], corpus: dict[
     out.append("_" + " | ".join(bits) + "_")
     out.append("")
 
+    from .scoring import posture, score_all
+
+    scored = score_all(findings, patterns)
     counts = {"high": 0, "medium": 0, "low": 0}
     for f in findings:
         counts[f.severity] = counts.get(f.severity, 0) + 1
@@ -151,14 +157,23 @@ def render_summary(agent: dict[str, Any], findings: list[Finding], corpus: dict[
         out.append("")
         return "\n".join(out)
 
-    out.append("| # | Severity | Problem | Where | Rule | Fix |")
-    out.append("|---|---|---|---|---|---|")
-    ranked = sorted(findings, key=lambda f: SEVERITY_ORDER.get(f.severity, 99))
-    for i, f in enumerate(ranked, 1):
+    pm = posture(agent, scored)
+    out.append(
+        f"**Risk score {pm['overall_risk']}/100** · "
+        f"action nodes {pm['action_nodes']} (gated {pm['action_nodes_gated']}) · "
+        f"untrusted→action paths {pm['untrusted_to_action_paths']} · "
+        f"delegation loops {pm['delegation_loops']}"
+    )
+    out.append("")
+
+    out.append("| # | Risk | Severity | Problem | Where | Rule | Fix |")
+    out.append("|---|---|---|---|---|---|---|")
+    for i, s in enumerate(scored, 1):
+        f = s["finding"]
         p = patterns.get(f.pattern_id, {})
         where = _format_where(f.nodes, agent)
         out.append(
-            f"| {i} | {f.severity.upper()} | {p.get('title', f.pattern_id)} | "
+            f"| {i} | {s['score']} | {f.severity.upper()} | {p.get('title', f.pattern_id)} | "
             f"{where} | {_refs_short(p)} | {p.get('fix_short', '-')} |"
         )
     out.append("")

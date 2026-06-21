@@ -29,6 +29,8 @@ patterns:
   - id: unsupervised_external_write
     title: "Unsupervised external write / irreversible action"
     severity: high
+    impact: 5        # 1-5, how bad if it happens
+    likelihood: 4    # 1-5, how likely given the wiring
     trustworthiness_property: "Accountability & human oversight"
     causal_chain: >-
       Node `{node}` can perform an external action ({action}) with no
@@ -61,6 +63,8 @@ patterns:
   - id: injection_to_exfiltration
     title: "Prompt-injection → exfiltration path"
     severity: high
+    impact: 5        # 1-5, how bad if it happens
+    likelihood: 4    # 1-5, how likely given the wiring
     trustworthiness_property: "Robustness & security (Measure)"
     causal_chain: >-
       Node `{src}` ingests untrusted external content and a directed path reaches
@@ -94,6 +98,8 @@ patterns:
   - id: unbounded_delegation_loop
     title: "Unbounded delegation / self-invocation loop"
     severity: medium
+    impact: 3        # 1-5, how bad if it happens
+    likelihood: 3    # 1-5, how likely given the wiring
     trustworthiness_property: "Safety & resource control"
     causal_chain: >-
       A directed cycle ({cycle}) lets the agent delegate back into itself with no
@@ -126,6 +132,8 @@ patterns:
   - id: missing_oversight_instrumentation
     title: "Missing oversight instrumentation (kill-switch / audit log)"
     severity: medium
+    impact: 2        # 1-5, how bad if it happens
+    likelihood: 4    # 1-5, how likely given the wiring
     trustworthiness_property: "Accountability & transparency"
     causal_chain: >-
       The agent declares no {missing} → failures are neither interruptible in
