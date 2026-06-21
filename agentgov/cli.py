@@ -34,12 +34,29 @@ def _cmd_audit(args: argparse.Namespace) -> int:
     render = render_markdown if args.full else render_summary
     report = render(agent, findings, corpus)
 
+    # Governance: enforce the org's declared policy and record an audit entry.
+    blocked = False
+    gov_path = args.governance or ("governance.yaml" if Path("governance.yaml").is_file() else None)
+    if gov_path:
+        from .governance import apply_policy, audit_entry, load_policy, record, render_decision
+        from .scoring import score_all
+
+        patterns = {p["id"]: p for p in corpus["risk_patterns"]["patterns"]}
+        scored = score_all(findings, patterns)
+        policy = load_policy(gov_path)
+        result = apply_policy(scored, policy)
+        report += "\n" + render_decision(path, result)
+        blocked = result["decision"] == "block"
+        log_path = args.audit_log or policy.get("audit_log")
+        if log_path:
+            record(audit_entry(path, scored, result), log_path)
+
     if args.output:
         Path(args.output).write_text(report, encoding="utf-8")
         print(f"wrote {len(findings)} finding(s) to {args.output}", file=sys.stderr)
     else:
         print(report)
-    return 0
+    return 1 if (blocked and args.gate) else 0
 
 
 def _cmd_match(args: argparse.Namespace) -> int:
@@ -82,6 +99,16 @@ def build_parser() -> argparse.ArgumentParser:
     audit.add_argument(
         "--full", action="store_true",
         help="Show the full reasoning for each finding (default is a short table).",
+    )
+    audit.add_argument(
+        "--governance", help="Path to a governance.yaml policy (auto-detected in the cwd)."
+    )
+    audit.add_argument(
+        "--gate", action="store_true",
+        help="Exit non-zero when the governance policy blocks (for CI gating).",
+    )
+    audit.add_argument(
+        "--audit-log", help="Append a scan record to this JSON Lines audit register."
     )
     audit.add_argument(
         "-o", "--output", help="Write the Markdown report to a file instead of stdout."

@@ -1,0 +1,22 @@
+# Governance policy - the accountable owner declares the rules; agentgov enforces them.
+# This file is the org's accountability expressed as data (NIST GOVERN).
+
+# Block a scan when any non-waived finding scores at or above this.
+block_at_score: 70
+
+# Who owns the fix for each risk (responsibility assignment).
+default_owner: ai-risk-owner
+owners:
+  unsupervised_external_write: security-team
+  injection_to_exfiltration: security-team
+  unbounded_delegation_loop: platform-team
+  missing_oversight_instrumentation: platform-team
+
+# Accepted risks: a named, time-boxed exception. Expired waivers stop applying.
+waivers:
+  - pattern: unbounded_delegation_loop
+    reason: "ReAct loop is bounded by the framework recursion_limit in our deployment."
+    expires: 2026-12-31
+
+# Append-only evidence trail; one JSON line per scan.
+audit_log: .agentgov/audit-log.jsonl

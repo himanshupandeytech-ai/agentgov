@@ -69,6 +69,9 @@ uv run agentgov audit demo/agent_safe.yaml       # CLEAN   -> nothing (controls 
 
 uv run agentgov audit demo/agent.yaml --full     # add --full for the reasoning
 uv run agentgov audit demo/agent.yaml -o out.md  # or write the report to a file
+
+# enforce a policy and gate a build (exit 1 when it blocks); record an audit entry:
+uv run agentgov audit demo/agent_graph.py --governance demo/governance.yaml --gate
 ```
 
 Input type is auto-detected: `.yaml` = manifest, `.py` = LangGraph code, `.json` = run trace.
@@ -129,6 +132,17 @@ search and traversal (run `agentgov match "<risk>"` to query it). The mappings l
 agentgov checks the agent's structure - tools, edges, oversight - and points to
 [Inspect](https://inspect.aisi.org.uk) (UK AI Security Institute) for model-behaviour
 evaluation, so the two together cover structure and behaviour.
+
+### Mapped to the NIST AI RMF functions
+
+agentgov follows the framework it enforces:
+
+| Function | How agentgov does it |
+|---|---|
+| **GOVERN** | Policy-as-code in `governance.yaml` (owners, score thresholds, time-boxed waivers), enforced by `--gate`; every scan appended to an audit register. The named risk owner still holds accountability - the tool enforces and records, it does not own the risk. |
+| **MAP** | Detectors enumerate the risk surface - tools, edges, permissions, untrusted-input paths - across design, code, and runtime. |
+| **MEASURE** | A 0-100 risk score per finding (impact × likelihood) plus posture metrics, and a precision/recall benchmark for the detectors themselves. |
+| **MANAGE** | Each finding carries a concrete control, action, and the exact line, routed to the role that owns the fix. |
 
 ## Where it runs - including as a skill
 
