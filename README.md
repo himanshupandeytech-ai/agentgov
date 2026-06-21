@@ -48,14 +48,14 @@ When the input is **code**, each finding cites the **exact file, line, and funct
 so the engineer goes straight to the spot. (Example, run on a public multi-agent repo:
 `math_agent (supervisor.py:229), math_tools (supervisor.py:234)` - an unbounded agent/tool loop.)
 
-The three layers are **not redundant** - each catches what the others cannot:
+Each input catches things the others can't:
 
-| Stage | You give it | It catches (in the demos) | Like in software |
+| Stage | You give it | What it found in the demo | Closest software analogy |
 |---|---|---|---|
-| **Design** | `demo/agent.yaml` | a runaway delegation loop in the planned architecture | architecture review |
-| **Build** | `demo/agent_graph.py` | untrusted web text wired into the email tool (injection) | code review / CI |
-| **Runtime** | `demo/trace_langsmith.json` | a money transfer that actually executed with no approval | QA / UAT / audit logs |
-| _(control)_ | `demo/agent_safe.yaml` | nothing - controls applied, clean pass | a passing build |
+| **Design** | `demo/agent.yaml` | an agent that can loop back on itself with nothing to stop it | architecture review |
+| **Build** | `demo/agent_graph.py` | web-search text feeding straight into the email tool | code review / CI |
+| **Runtime** | `demo/trace_langsmith.json` | a $25k transfer that actually went through, no approval | QA / UAT |
+| **Safe version** | `demo/agent_safe.yaml` | nothing - same agent, but with the guardrails added | a green build |
 
 ## Quickstart (uv)
 
